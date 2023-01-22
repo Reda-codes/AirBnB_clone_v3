@@ -7,6 +7,9 @@ from models import storage
 from werkzeug.exceptions import NotFound, MethodNotAllowed, BadRequest
 
 
+ALLOWED_METHODS = ['GET', 'DELETE', 'POST', 'PUT']
+
+
 @app_views.route('/states', methods=['GET', 'POST'])
 @app_views.route('/states/<state_id>', methods=['GET', 'DELETE', 'PUT'])
 def handle_states(state_id=None):
