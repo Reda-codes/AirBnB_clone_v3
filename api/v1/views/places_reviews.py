@@ -48,7 +48,7 @@ def add_review(review_id=None, place_id=None):
     POST method: Adds a new reviewe
     '''
     place = storage.get(Place, place_id)
-    if not city:
+    if not place:
         raise NotFound("Place do not exist")
     inputData = request.get_json()
     if type(inputData) is not dict:
@@ -89,10 +89,9 @@ def remove_review(review_id=None):
     '''
     DELETE method: Removes a review with the given id.
     '''
-    all_reviews = storage.all(Review).values()
-    res = list(filter(lambda x: x.id == review_id, all_reviews))
-    if res:
-        storage.delete(res[0])
+    review = storage.get(Review, review_id)
+    if review:
+        storage.delete(review)
         storage.save()
         return jsonify({}), 200
     raise NotFound()
