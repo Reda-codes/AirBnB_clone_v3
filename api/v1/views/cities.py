@@ -1,86 +1,89 @@
 #!/usr/bin/python3
-'''Contains the states view for the API.'''
+'''Contains the Cities view for the API.'''
 from flask import jsonify, request
 from api.v1.views import app_views
 from models.state import State
 from models import storage
 from werkzeug.exceptions import NotFound, MethodNotAllowed, BadRequest
+from models.city import City
 
 
-ALLOWED_METHODS = ['GET', 'DELETE', 'POST', 'PUT']
-
-
-@app_views.route('/states', methods=['GET', 'POST'])
-@app_views.route('/states/<state_id>', methods=['GET', 'DELETE', 'PUT'])
-def handle_states(state_id=None):
+@app_views.route('/states/<state_id>/cities', methods=['GET', 'POST'])
+@app_views.route('/cities/<city_id>', methods=['GET', 'DELETE', 'PUT'])
+def handle_cities(city_id=None, state_id=None):
     '''Check for allowed methodes'''
     handlers = {
-        'GET': get_states,
-        'DELETE': remove_state,
-        'POST': add_state,
-        'PUT': update_state,
+        'GET': get_cities,
+        'DELETE': remove_city,
+        'POST': add_city,
+        'PUT': update_city,
     }
     if request.method in handlers:
-        return handlers[request.method](state_id)
+        return handlers[request.method](city_id, state_id)
     else:
         raise MethodNotAllowed(list(handlers.keys()))
 
 
-def get_states(state_id=None):
+def get_cities(city_id=None, state_id=None):
     '''
-    GET method: Gets a state with the given id
-    otherwise return all states
+    GET method: Gets a city with the given id
+    otherwise return all cities in state
     '''
-    all_states = storage.all(State).values()
     if state_id:
-        res = list(filter(lambda x: x.id == state_id, all_states))
-        if res:
-            return jsonify(res[0].to_dict())
+        state = storage.get(State, state_id)
+        if state:
+            cities = list(map(lambda x: x.to_dict(), state.cities))
+            return jsonify(cities)
+    elif city_id:
+        city = storage.get(City, city_id)
+        if city:
+            return jsonify(city.to_dict())
+    raise NotFound()
+
+
+def add_city(city_id=None, state_id=None):
+    '''
+    POST method: Adds a new city
+    '''
+    state = storage.get(State, state_id)
+    if not state:
         raise NotFound()
-    all_states = list(map(lambda x: x.to_dict(), all_states))
-    return jsonify(all_states)
-
-
-def add_state(state_id=None):
-    '''
-    POST method: Adds a new state
-    '''
     inputData = request.get_json()
     if type(inputData) is not dict:
         raise BadRequest(description='Not a JSON')
     if 'name' not in inputData:
         raise BadRequest(description='Missing name')
-    new_state = State(**inputData)
-    new_state.save()
-    return jsonify(new_state.to_dict()), 201
+    inputData['state_id'] = state_id
+    new_city = City(**inputData)
+    new_city.save()
+    return jsonify(new_city.to_dict()), 201
 
 
-def update_state(state_id=None):
+def update_city(city_id=None, state_id=None):
     '''
-    PUT method: Updates a state with the given id.
+    PUT method: Updates a city with the given id.
     '''
-    inputKeys = ('id', 'created_at', 'updated_at')
-    all_states = storage.all(State).values()
-    res = list(filter(lambda x: x.id == state_id, all_states))
-    if res:
-        inputData = request.get_json()
-        if type(inputData) is not dict:
-            raise BadRequest(description='Not a JSON')
-        stateToUpdate = res[0]
-        for key, value in inputData.items():
-            if key not in inputKeys:
-                setattr(stateToUpdate, key, value)
-        stateToUpdate.save()
-        return jsonify(stateToUpdate.to_dict()), 200
+    inputKeys = ('id', 'state_id', 'created_at', 'updated_at')
+    if city_id:
+        cityToUpdate = storage.get(City, city_id)
+        if cityToUpdate:
+            inputData = request.get_json()
+            if type(inputData) is not dict:
+                raise BadRequest(description='Not a JSON')
+            for key, value in inputData.items():
+                if key not in inputKeys:
+                    setattr(cityToUpdate, key, value)
+            cityToUpdate.save()
+            return jsonify(cityToUpdate.to_dict()), 200
     raise NotFound()
 
 
-def remove_state(state_id=None):
+def remove_city(city_id=None, state_id=None):
     '''
     DELETE method: Removes a state with the given id.
     '''
-    all_states = storage.all(State).values()
-    res = list(filter(lambda x: x.id == state_id, all_states))
+    all_cities = storage.all(City).values()
+    res = list(filter(lambda x: x.id == city_id, all_cities))
     if res:
         storage.delete(res[0])
         storage.save()
